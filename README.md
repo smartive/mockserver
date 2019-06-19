@@ -1,3 +1,3 @@
-# mockserver
+# Mockserver
 
-A simple node.js mockserver
+A simple node.js based mockserver

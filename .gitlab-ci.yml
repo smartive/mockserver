@@ -1,0 +1,15 @@
+image: node:10
+
+stages:
+  - release
+
+release generator:
+  stage: release
+  before_script:
+    - npm ci
+  script:
+    - npx semantic-release
+  only:
+    - master
+  tags:
+    - smartive
