@@ -2,10 +2,24 @@
   "name": "@smartive/mockserver",
   "version": "0.0.0-development",
   "description": "",
-  "private": true,
   "main": "index.js",
   "scripts": {
     "start": "node ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smartive/mockserver.git"
+  },
+  "bugs": {
+    "url": "https://github.com/smartive/mockserver/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/smartive/mockserver#readme",
+  "engines": {
+    "node": ">=10",
+    "npm": ">=6"
   },
   "author": "",
   "license": "ISC",
