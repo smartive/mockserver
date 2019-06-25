@@ -2,6 +2,13 @@
 
 A simple node.js based mockserver
 
+## Setup
+
+```
+npm i
+npm start
+```
+
 ## Usage with Docker Compose
 
 ```
