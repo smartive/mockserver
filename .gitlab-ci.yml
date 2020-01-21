@@ -1,34 +1,20 @@
-image: node:10
+include:
+  - project: 'smartive/ci-templates'
+    ref: v1.4.1
+    file: '/all-templates.yml'
 
 stages:
   - release
 
-.base:
-  tags:
-    - smartive
-
-release generator:
-  extends: .base
+create release:
   stage: release
-  before_script:
-    - npm ci
-  script:
-    - npx semantic-release
+  extends: .create-release
   only:
     - master
 
 deploy docker image:
-  extends: .base
+  extends: .gitlab-docker
   stage: release
-  image: docker:latest
-  variables:
-    DOCKER_DRIVER: overlay2
-    DOCKER_HOST: tcp://localhost:2375
-    DOCKER_FILE: ./Dockerfile
-    DOCKER_CONTEXT: "."
-    DOCKER_BUILDKIT: "1"
-  services:
-    - docker:dind
   before_script:
     - docker login -u $DOCKER_REGISTRY_USER -p $DOCKER_REGISTRY_PASSWORD
   script:
