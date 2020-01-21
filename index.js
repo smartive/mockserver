@@ -25,7 +25,7 @@ Structure of route:
 app.use(bodyParser.json());
 
 const route = express.Router();
-app.use(process.env.MOCK_PATH, route);
+app.use(process.env.MOCK_PATH || "/mock", route);
 
 route.post("/mock", (req, res) => {
   console.log(`Mocking route:`, req.body);
@@ -87,8 +87,15 @@ app.all("*", (req, res) => {
     if (new RegExp(`^${route.request.match}$`).test(req.url)) {
       console.log(`Call to ${req.url} matched ${route.request.match}`);
       res.status(route.response.status);
-      res.setHeader("Content-Type", "application/json");
-      res.send(JSON.stringify(route.response.body));
+      res.setHeader(
+        "Content-Type",
+        route.response.contentType || "application/json"
+      );
+      res.send(
+        route.response.contentType
+          ? route.response.body
+          : JSON.stringify(route.response.body)
+      );
 
       return;
     }
@@ -103,8 +110,8 @@ app.all("*", (req, res) => {
   });
 });
 
-app.listen(process.env.PORT, process.env.HOST, () =>
-  console.log(
-    `Smart mockserver running at ${process.env.HOST}:${process.env.PORT}`
-  )
+const port = process.env.PORT || "1080";
+const host = process.env.HOST || "0.0.0.0";
+app.listen(port, host, () =>
+  console.log(`Smart mockserver running at ${host}:${port}`)
 );
