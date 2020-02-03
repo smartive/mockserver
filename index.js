@@ -23,6 +23,7 @@ Structure of route:
 */
 
 app.use(bodyParser.json());
+app.use(bodyParser.text())
 
 const route = express.Router();
 app.use(process.env.MOCK_PATH || "/mock", route);
