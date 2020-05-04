@@ -1,6 +1,6 @@
 # Mockserver
 
-A simple node.js based mockserver
+A simple node.js based web and mail mockserver
 
 ## Setup
 

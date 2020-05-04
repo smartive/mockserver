@@ -8,6 +8,7 @@ RUN npm ci
 
 COPY index.js .
 
+EXPOSE 25
 EXPOSE 1080
 
 ENTRYPOINT [ "npm", "run" ]

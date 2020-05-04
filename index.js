@@ -1,11 +1,14 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const { SMTPServer } = require("smtp-server");
 
 const app = express();
 
 let routes = [];
 let calls = [];
 let nextCallListeners = [];
+let mails = [];
+let nextMailListeners = [];
 
 /*
 Structure of route:
@@ -23,15 +26,47 @@ Structure of route:
 */
 
 app.use(bodyParser.json());
-app.use(bodyParser.text())
+app.use(bodyParser.text());
+
+const smtpServer = new SMTPServer({
+  authOptional: true,
+  onData: async (stream, _session, callback) => {
+    console.log("Got mail");
+    const mail = await streamToString(stream);
+
+    if (nextMailListeners.length) {
+      console.log("Notifying mail listeners", nextMailListeners.length);
+      nextMailListeners.forEach((listener) => listener(mail));
+      nextMailListeners = [];
+    } else {
+      console.log("Adding mail to queue");
+      mails.push(mail);
+    }
+
+    callback();
+  },
+  onAuth: (_auth, _session, cb) => {
+    console.log("Mail auth");
+    cb(null, { user: "dummy" });
+  },
+});
+
+smtpServer.listen("25", "0.0.0.0");
 
 const route = express.Router();
 app.use(process.env.MOCK_PATH || "/mock", route);
 
+const streamToString = (readStream) =>
+  new Promise((res) => {
+    const chunks = [];
+    readStream.on("data", (chunk) => chunks.push(chunk));
+    readStream.on("end", () => res(Buffer.concat(chunks)));
+  });
+
 route.post("/mock", (req, res) => {
   console.log(`Mocking route:`, req.body);
   routes = routes.filter(
-    route => route.request.match !== req.body.request.match
+    (route) => route.request.match !== req.body.request.match
   );
   routes.push(req.body);
   res.sendStatus(204);
@@ -42,6 +77,8 @@ route.post("/reset", (_req, res) => {
   routes = [];
   calls = [];
   nextCallListeners = [];
+  mails = [];
+  nextMailListeners = [];
   res.sendStatus(204);
 });
 
@@ -49,6 +86,8 @@ route.post("/reset/calls", (_req, res) => {
   console.log("resetting calls");
   calls = [];
   nextCallListeners = [];
+  mails = [];
+  nextMailListeners = [];
   res.sendStatus(204);
 });
 
@@ -62,7 +101,21 @@ route.get("/calls/next", (_req, res) => {
     res.send(calls.shift());
   } else {
     console.log("registering a call listener");
-    nextCallListeners.push(call => res.send(call));
+    nextCallListeners.push((call) => res.send(call));
+  }
+});
+
+route.get("/mails", (_req, res) => {
+  res.send(mails);
+});
+
+route.get("/mails/next", (_req, res) => {
+  if (mails.length) {
+    console.log("sending a mail");
+    res.send(mails.shift());
+  } else {
+    console.log("registering a mail listener", nextMailListeners.length);
+    nextMailListeners.push((mail) => res.send(mail));
   }
 });
 
@@ -75,10 +128,10 @@ app.all("*", (req, res) => {
     method: req.method,
     headers: req.headers,
     url: req.url,
-    body: req.body
+    body: req.body,
   };
   if (nextCallListeners.length) {
-    nextCallListeners.forEach(listener => listener(call));
+    nextCallListeners.forEach((listener) => listener(call));
     nextCallListeners = [];
   } else {
     calls.push(call);
@@ -107,7 +160,7 @@ app.all("*", (req, res) => {
 
   res.status(400).send({
     error: errorMessage,
-    url: req.url
+    url: req.url,
   });
 });
 
