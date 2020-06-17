@@ -1,0 +1,34 @@
+{
+  "verifyConditions": ["@semantic-release/github"],
+  "addChannel": ["@semantic-release/github"],
+  "prepare": [
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "docker build -t smartive/mockserver ."
+      }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "docker tag smartive/mockserver:latest smartive/mockserver:${nextRelease.version}"
+      }
+    ],
+    ["@semantic-release/git"]
+  ],
+  "publish": [
+    [
+      "@semantic-release/exec",
+      {
+        "publishCmd": "docker push smartive/mockserver:latest"
+      }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "publishCmd": "docker push smartive/mockserver:${nextRelease.version}"
+      }
+    ],
+    ["@semantic-release/github"]
+  ]
+}
