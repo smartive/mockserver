@@ -11,7 +11,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "docker tag smartive/mockserver:latest smartive/mockserver:${nextRelease.version}"
+        "prepareCmd": "docker tag smartive/mockserver:latest smartive/mockserver:v${nextRelease.version}"
       }
     ],
     ["@semantic-release/git"]
@@ -26,7 +26,7 @@
     [
       "@semantic-release/exec",
       {
-        "publishCmd": "docker push smartive/mockserver:${nextRelease.version}"
+        "publishCmd": "docker push smartive/mockserver:v${nextRelease.version}"
       }
     ],
     ["@semantic-release/github"]
