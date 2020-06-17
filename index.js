@@ -140,16 +140,14 @@ app.all("*", (req, res) => {
   for (const route of routes) {
     if (new RegExp(`^${route.request.match}$`).test(req.url)) {
       console.log(`Call to ${req.url} matched ${route.request.match}`);
-      res.status(route.response.status);
-      res.setHeader(
-        "Content-Type",
-        route.response.contentType || "application/json"
-      );
-      res.send(
-        route.response.contentType
-          ? route.response.body
-          : JSON.stringify(route.response.body)
-      );
+      const response = route.response;
+      res.status(response.status);
+      res.setHeader("Content-Type", response.contentType || "application/json");
+      const body = response.bodies ? response.bodies.shift() : response.body;
+      res.send(response.contentType ? body : JSON.stringify(body));
+      if (response.bodies && response.bodies.length === 0) {
+        routes = routes.filter((r) => r !== nm, route);
+      }
 
       return;
     }
