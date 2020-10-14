@@ -4,6 +4,10 @@ const { SMTPServer } = require("smtp-server");
 
 const app = express();
 
+const PORT = process.env.PORT || "1080";
+const SMTP_PORT = process.env.SMTP_PORT || "25";
+const HOST = process.env.HOST || "0.0.0.0";
+
 let routes = [];
 let calls = [];
 let nextCallListeners = [];
@@ -51,7 +55,7 @@ const smtpServer = new SMTPServer({
   },
 });
 
-smtpServer.listen("25", "0.0.0.0");
+smtpServer.listen(SMTP_PORT, HOST);
 
 const route = express.Router();
 app.use(process.env.MOCK_PATH || "/mock", route);
@@ -66,7 +70,7 @@ const streamToString = (readStream) =>
 route.post("/mock", (req, res) => {
   console.log(`Mocking route:`, req.body);
   routes = routes.filter(
-    (route) => route.request.match !== req.body.request.match
+    (route) => !(route.request.match === req.body.request.match && route.request.bodyMatch === req.body.request.bodyMatch)
   );
   routes.push(req.body);
   res.sendStatus(204);
@@ -137,11 +141,12 @@ app.all("*", (req, res) => {
     calls.push(call);
   }
 
+  const stringifiedBody = JSON.stringify(req.body, null, 2)
   for (const route of routes) {
-    if (new RegExp(`^${route.request.match}$`).test(req.url)) {
-      console.log(`Call to ${req.url} matched ${route.request.match}`);
+    if (new RegExp(`^${route.request.match}$`).test(req.url) && (!route.request.bodyMatch || new RegExp(`^${route.request.bodyMatch}$`, 'm').test(stringifiedBody))) {
+      console.log(`Call to ${req.url} matched ${route.request.match} ${route.request.bodyMatch || ''}`);
       const response = route.response;
-      res.status(response.status);
+      res.status(response.status || 200);
       res.setHeader("Content-Type", response.contentType || "application/json");
       const body = response.bodies ? response.bodies.shift() : response.body;
       res.send(response.contentType ? body : JSON.stringify(body));
@@ -154,7 +159,6 @@ app.all("*", (req, res) => {
   }
 
   const errorMessage = `Request ${req.url} didn't match any registered route.`;
-  console.log(errorMessage, routes);
 
   res.status(400).send({
     error: errorMessage,
@@ -162,8 +166,6 @@ app.all("*", (req, res) => {
   });
 });
 
-const port = process.env.PORT || "1080";
-const host = process.env.HOST || "0.0.0.0";
-app.listen(port, host, () =>
-  console.log(`Smart mockserver running at ${host}:${port}`)
+app.listen(PORT, HOST, () =>
+  console.log(`Smart mockserver running at ${HOST}:${PORT}`)
 );

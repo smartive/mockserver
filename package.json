@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "env-cmd npm start",
     "start": "node ."
   },
   "repository": {
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@semantic-release/exec": "^5.0.0",
+    "env-cmd": "^10.1.0",
     "semantic-release": "^15.13.16"
   }
 }
