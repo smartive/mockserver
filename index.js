@@ -83,7 +83,7 @@ route.post("/reset", (_req, res) => {
   nextCallListeners = [];
   mails = [];
   nextMailListeners = [];
-  res.sendStatus(200);
+  res.sendStatus(204);
 });
 
 route.post("/reset/calls", (_req, res) => {
