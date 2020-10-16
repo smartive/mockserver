@@ -1,5 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const cors = require('cors')
 const { SMTPServer } = require("smtp-server");
 
 const app = express();
@@ -29,6 +30,7 @@ Structure of route:
 
 */
 
+app.use(cors({ origin: `*`}))
 app.use(bodyParser.json());
 app.use(bodyParser.text());
 
