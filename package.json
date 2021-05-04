@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "env-cmd npm start",
-    "start": "node ."
+    "start": "node .",
+    "prettier": "prettier -c *.js *.md"
   },
   "repository": {
     "type": "git",
@@ -19,7 +20,7 @@
   },
   "homepage": "https://github.com/smartive/mockserver#readme",
   "engines": {
-    "node": ">=10",
+    "node": "^14",
     "npm": ">=6"
   },
   "author": "",
@@ -31,7 +32,9 @@
   },
   "devDependencies": {
     "@semantic-release/exec": "^5.0.0",
+    "@smartive/prettier-config": "^3.0.0",
     "env-cmd": "^10.1.0",
+    "prettier": "^2.2.1",
     "semantic-release": "^17.4.2"
   }
 }
