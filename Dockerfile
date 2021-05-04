@@ -1,15 +1,14 @@
-FROM node:10
+FROM node:14-alpine
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-RUN npm ci
+RUN npm ci --only=production
 
 COPY index.js .
 
 EXPOSE 25
 EXPOSE 1080
 
-ENTRYPOINT [ "npm", "run" ]
-CMD [ "start" ]
+CMD npm start
