@@ -11,7 +11,6 @@ const { readFileSync } = require('fs');
 const PORT = process.env.PORT || '1080';
 const SMTP_PORT = process.env.SMTP_PORT || '25';
 const HOST = process.env.HOST || '0.0.0.0';
-const HTTPS_HOST = process.env.HTTPS_HOST || 'mockserver.localhost';
 
 let routes = [];
 let calls = [];
