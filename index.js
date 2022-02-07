@@ -4,10 +4,14 @@ const cors = require('cors');
 const { SMTPServer } = require('smtp-server');
 
 const app = express();
+const http = require('http');
+const https = require('https');
+const { readFileSync } = require('fs');
 
 const PORT = process.env.PORT || '1080';
 const SMTP_PORT = process.env.SMTP_PORT || '25';
 const HOST = process.env.HOST || '0.0.0.0';
+const HTTPS_HOST = process.env.HTTPS_HOST || 'mockserver.localhost';
 
 let routes = [];
 let calls = [];
@@ -171,4 +175,7 @@ app.all('*', (req, res) => {
   });
 });
 
-app.listen(PORT, HOST, () => console.log(`Smart mockserver running at ${HOST}:${PORT}`));
+http.createServer(app).listen(PORT, HOST, () => console.log(`Smart mockserver running at ${HOST}:${PORT}`));
+https
+  .createServer({ key: readFileSync('cert/localhost.key'), cert: readFileSync('cert/localhost.crt') }, app)
+  .listen(1081, HOST, () => console.log(`Smart mockserver running at ${HOST}:${1081}`));
