@@ -8,7 +8,8 @@ const http = require('http');
 const https = require('https');
 const { readFileSync } = require('fs');
 
-const PORT = process.env.PORT || '1080';
+const HTTP_PORT = process.env.PORT || 1080;
+const HTTPS_PORT = process.env.MOCKSERVER_HTTPS_PORT;
 const SMTP_PORT = process.env.SMTP_PORT || '25';
 const HOST = process.env.HOST || '0.0.0.0';
 
@@ -174,7 +175,9 @@ app.all('*', (req, res) => {
   });
 });
 
-http.createServer(app).listen(PORT, HOST, () => console.log(`Smart mockserver running at ${HOST}:${PORT}`));
-https
-  .createServer({ key: readFileSync('cert/localhost.key'), cert: readFileSync('cert/localhost.crt') }, app)
-  .listen(1081, HOST, () => console.log(`Smart mockserver running at ${HOST}:${1081}`));
+http.createServer(app).listen(HTTP_PORT, HOST, () => console.log(`Smart mockserver running at ${HOST}:${HTTP_PORT}`));
+if (HTTPS_PORT) {
+  https
+    .createServer({ key: readFileSync('cert/localhost.key'), cert: readFileSync('cert/localhost.crt') }, app)
+    .listen(HTTPS_PORT, HOST, () => console.log(`Smart mockserver running at ${HOST}:${HTTPS_PORT}`));
+}

@@ -20,3 +20,7 @@ services:
     HOST: 0.0.0.0
     PORT: 1080
 ```
+
+## HTTPS
+
+Set a `MOCKSERVER_HTTPS_PORT` env variable to start an https server as well.
