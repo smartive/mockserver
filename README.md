@@ -23,4 +23,4 @@ services:
 
 ## HTTPS
 
-Set a `MOCKSERVER_HTTPS_PORT` env variable to start an https server as well.
+Set a `HTTPS_PORT` env variable to start an https server as well.
