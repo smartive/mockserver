@@ -9,7 +9,7 @@ const https = require('https');
 const { readFileSync } = require('fs');
 
 const HTTP_PORT = process.env.PORT || 1080;
-const HTTPS_PORT = process.env.MOCKSERVER_HTTPS_PORT;
+const HTTPS_PORT = process.env.HTTPS_PORT;
 const SMTP_PORT = process.env.SMTP_PORT || '25';
 const HOST = process.env.HOST || '0.0.0.0';
 
