@@ -8,10 +8,11 @@ const http = require('http');
 const https = require('https');
 const { readFileSync } = require('fs');
 
-const HTTP_PORT = process.env.PORT || 1080;
-const HTTPS_PORT = process.env.HTTPS_PORT;
-const SMTP_PORT = process.env.SMTP_PORT || '25';
-const HOST = process.env.HOST || '0.0.0.0';
+const HTTP_PORT = process.env.MOCK_HTTP_PORT || process.env.PORT || 1080;
+const HTTPS_PORT = process.env.MOCK_HTTPS_PORT || process.env.HTTPS_PORT;
+const SMTP_PORT = process.env.MOCK_SMTP_PORT || process.env.SMTP_PORT || '25';
+const HOST = process.env.MOCK_HOST || process.env.HOST || '0.0.0.0';
+const MOCK_PATH = process.env.MOCK_PATH || '/mock';
 
 let routes = [];
 let calls = [];
@@ -64,7 +65,7 @@ const smtpServer = new SMTPServer({
 smtpServer.listen(SMTP_PORT, HOST);
 
 const route = express.Router();
-app.use(process.env.MOCK_PATH || '/mock', route);
+app.use(MOCK_PATH, route);
 
 const streamToString = (readStream) =>
   new Promise((res) => {
