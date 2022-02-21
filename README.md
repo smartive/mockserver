@@ -17,10 +17,10 @@ services:
   image: smartive/mockserver
   environment:
     MOCK_PATH: /mock
-    HOST: 0.0.0.0
-    PORT: 1080
+    MOCK_HOST: 0.0.0.0
+    MOCK_HTTP_PORT: 1080
 ```
 
 ## HTTPS
 
-Set a `HTTPS_PORT` env variable to start an https server as well.
+Set a `MOCK_HTTPS_PORT` env variable to start an https server as well.
