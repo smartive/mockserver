@@ -20,8 +20,8 @@
   },
   "homepage": "https://github.com/smartive/mockserver#readme",
   "engines": {
-    "node": "^14",
-    "npm": ">=6"
+    "node": "^18",
+    "npm": ">=8"
   },
   "author": "",
   "license": "ISC",
