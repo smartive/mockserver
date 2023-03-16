@@ -1,4 +1,4 @@
-FROM node:14-alpine
+FROM node:18-alpine as deps
 
 WORKDIR /app
 
@@ -8,6 +8,8 @@ RUN npm ci --only=production
 
 COPY index.js .
 COPY cert/ ./cert
+
+FROM deps
 
 EXPOSE 25
 EXPOSE 1080
