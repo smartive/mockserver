@@ -27,7 +27,7 @@
   "license": "ISC",
   "dependencies": {
     "cors": "2.8.5",
-    "express": "4.19.1",
+    "express": "4.19.2",
     "smtp-server": "3.13.3"
   },
   "devDependencies": {
