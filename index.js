@@ -148,7 +148,7 @@ app.all('*', (req, res) => {
     calls.push(call);
   }
 
-  const stringifiedBody = JSON.stringify(req.body, null, 2);
+  const stringifiedBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body, null, 2);
   for (const route of routes) {
     if (
       new RegExp(`^${route.request.match}$`).test(req.url) &&
