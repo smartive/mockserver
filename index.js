@@ -38,7 +38,7 @@ Structure of route:
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.text({ limit: '50mb' }));
-app.use(bodyParser.raw({ type: 'application/xml' }));
+app.use(bodyParser.raw());
 
 const smtpServer = new SMTPServer({
   authOptional: true,
