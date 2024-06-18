@@ -1,4 +1,4 @@
-# Mockserver!
+# Mockserver
 
 A simple node.js based web and mail mockserver
 
