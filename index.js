@@ -152,7 +152,7 @@ app.all('*', (req, res) => {
   for (const route of routes) {
     if (
       new RegExp(`^${route.request.match}$`).test(req.url) &&
-      (!route.request.bodyMatch || new RegExp(`^${route.request.bodyMatch}$`, 'm').test(stringifiedBody))
+      (!route.request.bodyMatch || new RegExp(`^${route.request.bodyMatch}$`, 's').test(stringifiedBody))
     ) {
       console.log(`Call to ${req.url} matched ${route.request.match} ${route.request.bodyMatch || ''}`);
       const response = route.response;
