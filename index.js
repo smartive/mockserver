@@ -19,6 +19,12 @@ let calls = [];
 let nextCallListeners = [];
 let mails = [];
 let nextMailListeners = [];
+let recordingsContext = {
+  active: false,
+  namespace: '',
+  deleteBodyAttributes: [],
+};
+let recordings = {};
 
 /*
 Structure of route:
@@ -26,6 +32,7 @@ Structure of route:
 {
   request: {
     match: ''
+    bodyMatch: ''
   },
   response: {
     status: 200,
@@ -102,6 +109,25 @@ route.post('/reset/calls', (_req, res) => {
   res.sendStatus(204);
 });
 
+route.post('/record', (req, res) => {
+  console.log('Setting up recordings... info:', req.body);
+  recordingsContext.active = req.body.active || false;
+  recordingsContext.namespace = req.body.namespace || '';
+  recordingsContext.deleteBodyAttributes = req.body.deleteBodyAttributes || [];
+  res.sendStatus(204);
+});
+
+route.post('/load-recordings', (req, res) => {
+  console.log('Loading recordings');
+  recordings = req.body;
+  res.sendStatus(204);
+});
+
+route.get('/recordings', (_, res) => {
+  console.log('Getting recordings');
+  res.send(recordings);
+});
+
 route.get('/calls', (_req, res) => {
   res.send(calls);
 });
@@ -134,7 +160,7 @@ route.get('/routes', (_req, res) => {
   res.send(routes);
 });
 
-app.all('*', (req, res) => {
+app.all('*', async (req, res) => {
   const call = {
     method: req.method,
     headers: req.headers,
@@ -168,7 +194,71 @@ app.all('*', (req, res) => {
     }
   }
 
-  const errorMessage = `Request ${req.url} didn't match any registered route.`;
+  const obfuscatedBody = JSON.parse(JSON.stringify(req.body));
+  recordingsContext.deleteBodyAttributes.forEach((attr) => {
+    try {
+      console.log('Deleting attribute', attr);
+      eval(`delete obfuscatedBody.${attr}`);
+    } catch {
+      console.log('No attribute to delete: ', attr);
+    }
+  });
+  const dataToHash = {
+    url: req.url,
+    body: obfuscatedBody,
+    method: req.method,
+    headers: req.headers,
+  };
+  const crypto = require('crypto');
+  const hash = crypto.createHash('sha512').update(JSON.stringify(dataToHash)).digest('hex');
+  if (recordingsContext.active) {
+    try {
+      const host = req.url.split('/')[1];
+      const route = req.url.replace(`/${host}`, '');
+      const targetUrl = `https://${host}${route}`;
+      console.log('Proxying from ', req.url, ' to', targetUrl);
+      const proxyRes = await fetch(targetUrl, {
+        method: req.method,
+        headers: { ...req.headers, 'Access-Control-Allow-Origin': '*' },
+        ...(req.method !== 'GET' && req.method !== 'HEAD' ? { body: JSON.stringify(req.body) } : {}),
+      });
+      const status = proxyRes.status;
+
+      res.status(proxyRes.status);
+      for (const [key, value] of proxyRes.headers.entries()) {
+        res.setHeader(key, value);
+      }
+      const body = await proxyRes.text();
+      if (!recordings[recordingsContext.namespace]) {
+        recordings[recordingsContext.namespace] = {};
+      }
+      recordings[recordingsContext.namespace][hash] = {
+        body,
+        status,
+        hashData: {
+          ...dataToHash,
+        },
+      };
+
+      res.status(status).send(body);
+    } catch (e) {
+      console.log({
+        error: e.message + ' ' + req.method,
+        url: req.url,
+      });
+    }
+    return;
+  }
+
+  const responseFromHash = Object.values(recordings).find((rec) => rec[hash]);
+  if (responseFromHash) {
+    const { body, status } = responseFromHash[hash];
+    res.setHeader('Content-Type', 'application/json');
+    res.status(status).send(JSON.parse(body));
+    return;
+  }
+
+  const errorMessage = `Request ${req.url} didn't match any registered route. ${JSON.stringify(req.url, null, 2)}`;
 
   res.status(400).send({
     error: errorMessage,
