@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { SMTPServer } = require('smtp-server');
+const crypto = require('crypto');
 
 const app = express();
 const http = require('http');
@@ -160,6 +161,24 @@ route.get('/routes', (_req, res) => {
   res.send(routes);
 });
 
+function getShaFromData(data) {
+  return crypto.createHash('sha512').update(JSON.stringify(data)).digest('hex');
+}
+
+function deleteNestedProperty(obj, path) {
+  try {
+    const keys = path.split('.');
+    const lastKey = keys.pop();
+    const lastObj = keys.reduce((acc, key) => acc && acc[key], obj);
+
+    if (lastObj && lastKey in lastObj) {
+      delete lastObj[lastKey];
+    }
+  } catch {
+    console.log('Attribute not found, with path:', path);
+  }
+}
+
 app.all('*', async (req, res) => {
   const call = {
     method: req.method,
@@ -194,33 +213,30 @@ app.all('*', async (req, res) => {
     }
   }
 
-  const obfuscatedBody = JSON.parse(JSON.stringify(req.body));
-  recordingsContext.deleteBodyAttributes.forEach((attr) => {
-    try {
-      console.log('Deleting attribute', attr);
-      eval(`delete obfuscatedBody.${attr}`);
-    } catch {
-      console.log('No attribute to delete: ', attr);
-    }
+  const obfuscatedReqBodyForHash = JSON.parse(JSON.stringify(req.body));
+  recordingsContext.deleteBodyAttributes.forEach((path) => {
+    deleteNestedProperty(obfuscatedReqBodyForHash, path);
   });
+
   const dataToHash = {
     url: req.url,
-    body: obfuscatedBody,
+    body: obfuscatedReqBodyForHash,
     method: req.method,
     headers: req.headers,
   };
-  const crypto = require('crypto');
-  const hash = crypto.createHash('sha512').update(JSON.stringify(dataToHash)).digest('hex');
+
+  const hash = getShaFromData(dataToHash);
+
   if (recordingsContext.active) {
     try {
-      const host = req.url.split('/')[1];
-      const route = req.url.replace(`/${host}`, '');
+      const [_, host, ...routeParts] = req.url.split('/');
+      const route = `/${routeParts.join('/')}`;
       const targetUrl = `https://${host}${route}`;
-      console.log('Proxying from ', req.url, ' to', targetUrl);
+      console.log('Proxying from ', req.url, ' to', targetUrl, ' body: ', req.body);
       const proxyRes = await fetch(targetUrl, {
         method: req.method,
         headers: { ...req.headers, 'Access-Control-Allow-Origin': '*' },
-        ...(req.method !== 'GET' && req.method !== 'HEAD' ? { body: JSON.stringify(req.body) } : {}),
+        ...(req.method !== 'GET' && req.method !== 'HEAD' && req.body ? { body: JSON.stringify(req.body) } : {}),
       });
       const status = proxyRes.status;
 
@@ -250,9 +266,9 @@ app.all('*', async (req, res) => {
     return;
   }
 
-  const responseFromHash = Object.values(recordings).find((rec) => rec[hash]);
+  const responseFromHash = recordings[recordingsContext.namespace]?.[hash];
   if (responseFromHash) {
-    const { body, status } = responseFromHash[hash];
+    const { body, status } = responseFromHash;
     res.setHeader('Content-Type', 'application/json');
     res.status(status).send(JSON.parse(body));
     return;
