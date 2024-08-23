@@ -23,7 +23,8 @@ let nextMailListeners = [];
 let recordingsContext = {
   active: false,
   namespace: '',
-  deleteBodyAttributes: [],
+  deleteBodyAttributesForHash: [],
+  forwardHeadersForRoute: [],
 };
 let recordings = {};
 
@@ -114,7 +115,8 @@ route.post('/record', (req, res) => {
   console.log('Setting up recordings... info:', req.body);
   recordingsContext.active = req.body.active || false;
   recordingsContext.namespace = req.body.namespace || '';
-  recordingsContext.deleteBodyAttributes = req.body.deleteBodyAttributes || [];
+  recordingsContext.deleteBodyAttributesForHash = req.body.deleteBodyAttributesForHash || [];
+  recordingsContext.forwardHeadersForRoute = req.body.forwardHeadersForRoute || [];
   res.sendStatus(204);
 });
 
@@ -214,49 +216,64 @@ app.all('*', async (req, res) => {
   }
 
   const obfuscatedReqBodyForHash = JSON.parse(JSON.stringify(req.body));
-  recordingsContext.deleteBodyAttributes.forEach((path) => {
+  recordingsContext.deleteBodyAttributesForHash.forEach((path) => {
     deleteNestedProperty(obfuscatedReqBodyForHash, path);
   });
+
+  const [_, host, ...routeParts] = req.url.split('/');
+
+  const headers = {
+    ...req.headers,
+    ...(recordingsContext.forwardHeadersForRoute.find((forwardHeaders) => req.url.startsWith(forwardHeaders.route))
+      ?.headers || {}),
+  };
 
   const dataToHash = {
     url: req.url,
     body: obfuscatedReqBodyForHash,
     method: req.method,
-    headers: req.headers,
+    headers: headers,
   };
 
   const hash = getShaFromData(dataToHash);
 
   if (recordingsContext.active) {
     try {
-      const [_, host, ...routeParts] = req.url.split('/');
       const route = `/${routeParts.join('/')}`;
       const targetUrl = `https://${host}${route}`;
       console.log('Proxying from ', req.url, ' to', targetUrl, ' body: ', req.body);
       const proxyRes = await fetch(targetUrl, {
         method: req.method,
-        headers: { ...req.headers, 'Access-Control-Allow-Origin': '*' },
+        headers: { ...headers, 'Access-Control-Allow-Origin': '*' },
         ...(req.method !== 'GET' && req.method !== 'HEAD' && req.body ? { body: JSON.stringify(req.body) } : {}),
       });
       const status = proxyRes.status;
 
       res.status(proxyRes.status);
-      for (const [key, value] of proxyRes.headers.entries()) {
-        res.setHeader(key, value);
+      const contentType = proxyRes.headers.get('content-type');
+      let body;
+      if (contentType && contentType.includes('application/json')) {
+        body = await proxyRes.json();
+        res.setHeader('Content-Type', 'application/json');
+        res.json(body);
+      } else {
+        body = await proxyRes.text();
+        res.send(body);
       }
-      const body = await proxyRes.text();
+
       if (!recordings[recordingsContext.namespace]) {
         recordings[recordingsContext.namespace] = {};
       }
-      recordings[recordingsContext.namespace][hash] = {
-        body,
+      if (!recordings[recordingsContext.namespace][hash]) {
+        recordings[recordingsContext.namespace][hash] = [];
+      }
+      recordings[recordingsContext.namespace][hash].push({
+        body: typeof body === 'string' ? body : JSON.stringify(body),
         status,
         hashData: {
           ...dataToHash,
         },
-      };
-
-      res.status(status).send(body);
+      });
     } catch (e) {
       console.log({
         error: e.message + ' ' + req.method,
@@ -266,7 +283,7 @@ app.all('*', async (req, res) => {
     return;
   }
 
-  const responseFromHash = recordings[recordingsContext.namespace]?.[hash];
+  const responseFromHash = recordings[recordingsContext.namespace]?.[hash]?.shift();
   if (responseFromHash) {
     const { body, status } = responseFromHash;
     res.setHeader('Content-Type', 'application/json');
