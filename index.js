@@ -22,7 +22,6 @@ let mails = [];
 let nextMailListeners = [];
 let recordingsContext = {
   active: false,
-  namespace: '',
   deleteBodyAttributesForHash: [],
   forwardHeadersForRoute: [],
 };
@@ -114,7 +113,6 @@ route.post('/reset/calls', (_req, res) => {
 route.post('/record', (req, res) => {
   console.log('Setting up recordings... info:', req.body);
   recordingsContext.active = req.body.active || false;
-  recordingsContext.namespace = req.body.namespace || '';
   recordingsContext.deleteBodyAttributesForHash = req.body.deleteBodyAttributesForHash || [];
   recordingsContext.forwardHeadersForRoute = req.body.forwardHeadersForRoute || [];
   res.sendStatus(204);
@@ -261,13 +259,10 @@ app.all('*', async (req, res) => {
         res.send(body);
       }
 
-      if (!recordings[recordingsContext.namespace]) {
-        recordings[recordingsContext.namespace] = {};
+      if (!recordings[hash]) {
+        recordings[hash] = [];
       }
-      if (!recordings[recordingsContext.namespace][hash]) {
-        recordings[recordingsContext.namespace][hash] = [];
-      }
-      recordings[recordingsContext.namespace][hash].push({
+      recordings[hash].push({
         body: typeof body === 'string' ? body : JSON.stringify(body),
         status,
         hashData: {
@@ -283,7 +278,7 @@ app.all('*', async (req, res) => {
     return;
   }
 
-  const responseFromHash = recordings[recordingsContext.namespace]?.[hash]?.shift();
+  const responseFromHash = recordings[hash]?.shift();
   if (responseFromHash) {
     const { body, status } = responseFromHash;
     res.setHeader('Content-Type', 'application/json');
