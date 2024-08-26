@@ -24,8 +24,8 @@ let recordingsContext = {
   active: false,
   deleteBodyAttributesForHash: [],
   forwardHeadersForRoute: [],
+  recordings: {},
 };
-let recordings = {};
 
 /*
 Structure of route:
@@ -115,18 +115,13 @@ route.post('/record', (req, res) => {
   recordingsContext.active = req.body.active || false;
   recordingsContext.deleteBodyAttributesForHash = req.body.deleteBodyAttributesForHash || [];
   recordingsContext.forwardHeadersForRoute = req.body.forwardHeadersForRoute || [];
+  recordingsContext.recordings = req.body.recordings || {};
   res.sendStatus(204);
 });
 
-route.post('/load-recordings', (req, res) => {
-  console.log('Loading recordings');
-  recordings = req.body;
-  res.sendStatus(204);
-});
-
-route.get('/recordings', (_, res) => {
+route.get('/record', (_, res) => {
   console.log('Getting recordings');
-  res.send(recordings);
+  res.send(recordingsContext.recordings);
 });
 
 route.get('/calls', (_req, res) => {
@@ -259,13 +254,13 @@ app.all('*', async (req, res) => {
         res.send(body);
       }
 
-      if (!recordings[hash]) {
-        recordings[hash] = [];
+      if (!recordingsContext.recordings[hash]) {
+        recordingsContext.recordings[hash] = [];
       }
-      recordings[hash].push({
-        body: typeof body === 'string' ? body : JSON.stringify(body),
+      recordingsContext.recordings[hash].push({
+        body,
         status,
-        hashData: {
+        request: {
           ...dataToHash,
         },
       });
@@ -278,11 +273,20 @@ app.all('*', async (req, res) => {
     return;
   }
 
-  const responseFromHash = recordings[hash]?.shift();
+  const responseFromHash = recordingsContext.recordings[hash]?.shift();
   if (responseFromHash) {
     const { body, status } = responseFromHash;
-    res.setHeader('Content-Type', 'application/json');
-    res.status(status).send(JSON.parse(body));
+    res.status(status);
+    if (typeof body === 'object') {
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.parse(body));
+    }
+    try {
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.parse(body));
+    } catch {
+      res.send(body);
+    }
     return;
   }
 
