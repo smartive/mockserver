@@ -225,7 +225,11 @@ app.all('*', async (req, res) => {
     url: req.url,
     body: obfuscatedReqBodyForHash,
     method: req.method,
-    headers: headers,
+    headers: {
+      ...headers,
+      // since host can be different based on environment, we need to remove it from the hash
+      host: '',
+    },
   };
 
   const hash = getShaFromData(dataToHash);
@@ -279,13 +283,14 @@ app.all('*', async (req, res) => {
     res.status(status);
     if (typeof body === 'object') {
       res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.parse(body));
-    }
-    try {
-      res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.parse(body));
-    } catch {
       res.send(body);
+    } else {
+      try {
+        res.setHeader('Content-Type', 'application/json');
+        res.send(JSON.parse(body));
+      } catch {
+        res.send(body);
+      }
     }
     return;
   }
