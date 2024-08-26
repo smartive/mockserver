@@ -110,7 +110,7 @@ route.post('/reset/calls', (_req, res) => {
   res.sendStatus(204);
 });
 
-route.post('/record', (req, res) => {
+route.post('/recordings', (req, res) => {
   console.log('Setting up recordings... info:', req.body);
   recordingsContext.active = req.body.active || false;
   recordingsContext.deleteBodyAttributesForHash = req.body.deleteBodyAttributesForHash || [];
@@ -119,7 +119,7 @@ route.post('/record', (req, res) => {
   res.sendStatus(204);
 });
 
-route.get('/record', (_, res) => {
+route.get('/recordings', (_, res) => {
   console.log('Getting recordings');
   res.send(recordingsContext.recordings);
 });
