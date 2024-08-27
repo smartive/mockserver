@@ -24,6 +24,7 @@ let recordingsContext = {
   active: false,
   deleteBodyAttributesForHash: [],
   forwardHeadersForRoute: [],
+  deleteHeadersForHash: [],
   recordings: {},
 };
 
@@ -116,6 +117,7 @@ route.post('/recordings', (req, res) => {
   recordingsContext.deleteBodyAttributesForHash = req.body.deleteBodyAttributesForHash || [];
   recordingsContext.forwardHeadersForRoute = req.body.forwardHeadersForRoute || [];
   recordingsContext.recordings = req.body.recordings || {};
+  recordingsContext.deleteHeadersForHash = req.body.deleteHeadersForHash || [];
   res.sendStatus(204);
 });
 
@@ -217,8 +219,10 @@ app.all('*', async (req, res) => {
 
   const headers = {
     ...req.headers,
-    ...(recordingsContext.forwardHeadersForRoute.find((forwardHeaders) => req.url.startsWith(forwardHeaders.route))
-      ?.headers || {}),
+    ...(recordingsContext.forwardHeadersForRoute
+      // sort longest route first
+      .sort((a, b) => b.route.length - a.route.length)
+      .find((forwardHeaders) => req.url.startsWith(forwardHeaders.route))?.headers || {}),
   };
 
   const dataToHash = {
@@ -231,6 +235,10 @@ app.all('*', async (req, res) => {
       host: '',
     },
   };
+
+  recordingsContext.deleteHeadersForHash.forEach((header) => {
+    delete dataToHash.headers[header];
+  });
 
   const hash = getShaFromData(dataToHash);
 
@@ -296,7 +304,7 @@ app.all('*', async (req, res) => {
   res.status(400).send({
     error: {
       routes: `Request ${req.url} didn't match any registered route. ${JSON.stringify(req.url, null, 2)}`,
-      recordings: `Hash ${dataToHash} didn't match any recordings. Request data: ${JSON.stringify(dataToHash, null, 2)}`,
+      recordings: `Hash ${hash} didn't match any recordings. Request data: ${JSON.stringify(dataToHash, null, 2)}`,
     },
     url: req.url,
   });
