@@ -264,9 +264,7 @@ app.all('*', async (req, res) => {
       recordingsContext.recordings[hash].push({
         body,
         status,
-        request: {
-          ...dataToHash,
-        },
+        request: dataToHash,
       });
     } catch (e) {
       console.log({
@@ -295,10 +293,11 @@ app.all('*', async (req, res) => {
     return;
   }
 
-  const errorMessage = `Request ${req.url} didn't match any registered route. ${JSON.stringify(req.url, null, 2)}`;
-
   res.status(400).send({
-    error: errorMessage,
+    error: {
+      routes: `Request ${req.url} didn't match any registered route. ${JSON.stringify(req.url, null, 2)}`,
+      recordings: `Hash ${dataToHash} didn't match any recordings. Request data: ${JSON.stringify(dataToHash, null, 2)}`,
+    },
     url: req.url,
   });
 });
