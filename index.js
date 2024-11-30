@@ -24,7 +24,7 @@ let recordingsContext = {
   active: false,
   deleteBodyAttributesForHash: [],
   forwardHeadersForRoute: [],
-  deleteHeadersForHash: [],
+  deleteHeadersForHash: ['host'], // // since host can be different based on environment, we remove it from the hash
   recordings: {},
 };
 
@@ -229,11 +229,7 @@ app.all('*', async (req, res) => {
     url: req.url,
     body: obfuscatedReqBodyForHash,
     method: req.method,
-    headers: {
-      ...headers,
-      // since host can be different based on environment, we need to remove it from the hash
-      host: '',
-    },
+    headers,
   };
 
   recordingsContext.deleteHeadersForHash.forEach((header) => {
