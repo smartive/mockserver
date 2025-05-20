@@ -28,7 +28,7 @@
   "dependencies": {
     "cors": "2.8.5",
     "express": "4.21.2",
-    "smtp-server": "3.13.6"
+    "smtp-server": "3.13.7"
   },
   "devDependencies": {
     "@smartive/prettier-config": "3.1.2",
