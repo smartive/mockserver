@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@smartive/prettier-config": "3.1.2",
-    "env-cmd": "10.1.0",
+    "env-cmd": "11.0.0",
     "prettier": "2.8.8"
   }
 }
