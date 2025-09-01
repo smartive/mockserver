@@ -247,6 +247,7 @@ app.all('*', async (req, res) => {
       const route = `/${routeParts.join('/')}`;
       const targetUrl = `https://${host}${route}`;
       console.log('Proxying from ', req.url, ' to', targetUrl, ' body: ', req.body);
+      const start = Date.now();
       const proxyRes = await fetch(targetUrl, {
         method: req.method,
         headers: { ...headers, 'Access-Control-Allow-Origin': '*' },
@@ -265,6 +266,7 @@ app.all('*', async (req, res) => {
         body = await proxyRes.text();
         res.send(body);
       }
+      const durationMs = Date.now() - start;
 
       if (!recordingsContext.recordings[hash]) {
         recordingsContext.recordings[hash] = [];
@@ -273,6 +275,7 @@ app.all('*', async (req, res) => {
         body,
         status,
         request: dataToHash,
+        durationMs,
       });
     } catch (e) {
       console.log({
@@ -285,7 +288,10 @@ app.all('*', async (req, res) => {
 
   const responseFromHash = recordingsContext.recordings[hash]?.shift();
   if (responseFromHash) {
-    const { body, status } = responseFromHash;
+    const { body, status, durationMs } = responseFromHash;
+    if (typeof durationMs === 'number' && durationMs > 0) {
+      await new Promise((r) => setTimeout(r, durationMs));
+    }
     res.status(status);
     if (typeof body === 'object') {
       res.setHeader('Content-Type', 'application/json');
