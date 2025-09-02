@@ -18,5 +18,9 @@ jobs:
         run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v5
+        with:
+          extra_plugins: |
+            @semantic-release/exec
         env:
+          RUNNER_DEBUG: 1
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
