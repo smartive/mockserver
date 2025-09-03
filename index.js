@@ -25,6 +25,7 @@ let recordingsContext = {
   deleteBodyAttributesForHash: [],
   forwardHeadersForRoute: [],
   deleteHeadersForHash: [],
+  failedRequestsResponse: undefined,
   recordings: {},
 };
 
@@ -118,6 +119,7 @@ route.post('/recordings', (req, res) => {
   recordingsContext.forwardHeadersForRoute = req.body.forwardHeadersForRoute || [];
   recordingsContext.recordings = req.body.recordings || {};
   recordingsContext.deleteHeadersForHash = req.body.deleteHeadersForHash || [];
+  recordingsContext.failedRequestsResponse = req.body.failedRequestsResponse;
   res.sendStatus(204);
 });
 
@@ -307,7 +309,7 @@ app.all('*', async (req, res) => {
     return;
   }
 
-  if (process.env.SUPPRESS_MISSING_MOCK_ERRORS === 'true') {
+  if (!!recordingsContext.failedRequestsResponse) {
     console.error({
       error: {
         routes: `Request ${req.url} didn't match any registered route. ${JSON.stringify(req.url, null, 2)}`,
@@ -315,7 +317,7 @@ app.all('*', async (req, res) => {
       },
     });
 
-    res.status(200).send({});
+    res.status(200).send(recordingsContext.failedRequestsResponse);
     return;
   }
   res.status(400).send({
