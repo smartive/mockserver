@@ -19,7 +19,6 @@ services:
     MOCK_PATH: /mock
     MOCK_HOST: 0.0.0.0
     MOCK_HTTP_PORT: 1080
-    SUPPRESS_MISSING_MOCK_ERRORS: true
 ```
 
 ## HTTPS
