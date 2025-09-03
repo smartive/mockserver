@@ -307,6 +307,16 @@ app.all('*', async (req, res) => {
     return;
   }
 
+  if (process.env.SUPPRESS_MISSING_MOCK_ERRORS === 'true') {
+    console.error({
+      error: {
+        routes: `Request ${req.url} didn't match any registered route. ${JSON.stringify(req.url, null, 2)}`,
+        recordings: `Hash ${hash} didn't match any recordings. Request data: ${JSON.stringify(dataToHash, null, 2)}`,
+      },
+    });
+
+    res.status(200).send({});
+  }
   res.status(400).send({
     error: {
       routes: `Request ${req.url} didn't match any registered route. ${JSON.stringify(req.url, null, 2)}`,
