@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "env-cmd npm start",
+    "dev": "env-cmd -- npm start",
     "start": "node .",
     "prettier": "prettier -c *.js *.md"
   },
