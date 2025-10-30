@@ -200,7 +200,7 @@ app.all('*', async (req, res) => {
     ) {
       console.log(`Call to ${req.url} matched ${route.request.match} ${route.request.bodyMatch || ''}`);
       const response = route.response;
-      res.status(response.status || 200);
+      res.status(typeof response.status === 'string' ? parseInt(response.status) : response.status || 200);
       res.setHeader('Content-Type', response.contentType || 'application/json');
       const body = response.bodies ? response.bodies.shift() : response.body;
       res.send(response.contentType ? body : JSON.stringify(body));
@@ -257,7 +257,7 @@ app.all('*', async (req, res) => {
       });
       const status = proxyRes.status;
 
-      res.status(proxyRes.status);
+      res.status(status);
       const contentType = proxyRes.headers.get('content-type');
       let body;
       if (contentType && contentType.includes('application/json')) {
@@ -294,7 +294,7 @@ app.all('*', async (req, res) => {
     if (typeof durationMs === 'number' && durationMs > 0) {
       await new Promise((r) => setTimeout(r, durationMs));
     }
-    res.status(status);
+    res.status(typeof status === 'string' ? parseInt(status, 10) : status);
     if (typeof body === 'object') {
       res.setHeader('Content-Type', 'application/json');
       res.send(body);
