@@ -200,7 +200,7 @@ app.all('*', async (req, res) => {
     ) {
       console.log(`Call to ${req.url} matched ${route.request.match} ${route.request.bodyMatch || ''}`);
       const response = route.response;
-      res.status(typeof response.status === 'string' ? parseInt(response.status) : response.status || 200);
+      res.status(typeof response.status === 'string' ? parseInt(response.status, 10) : response.status || 200);
       res.setHeader('Content-Type', response.contentType || 'application/json');
       const body = response.bodies ? response.bodies.shift() : response.body;
       res.send(response.contentType ? body : JSON.stringify(body));
