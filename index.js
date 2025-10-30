@@ -114,12 +114,13 @@ route.post('/reset/calls', (_req, res) => {
 
 route.post('/recordings', (req, res) => {
   console.log('Setting up recordings... info:', req.body);
-  recordingsContext.active = req.body.active || false;
-  recordingsContext.deleteBodyAttributesForHash = req.body.deleteBodyAttributesForHash || [];
-  recordingsContext.forwardHeadersForRoute = req.body.forwardHeadersForRoute || [];
-  recordingsContext.recordings = req.body.recordings || {};
-  recordingsContext.deleteHeadersForHash = req.body.deleteHeadersForHash || [];
-  recordingsContext.failedRequestsResponse = req.body.failedRequestsResponse;
+  const body = req.body || {};
+  recordingsContext.active = body.active || false;
+  recordingsContext.deleteBodyAttributesForHash = body.deleteBodyAttributesForHash || [];
+  recordingsContext.forwardHeadersForRoute = body.forwardHeadersForRoute || [];
+  recordingsContext.recordings = body.recordings || {};
+  recordingsContext.deleteHeadersForHash = body.deleteHeadersForHash || [];
+  recordingsContext.failedRequestsResponse = body.failedRequestsResponse;
   res.sendStatus(204);
 });
 
@@ -178,12 +179,12 @@ function deleteNestedProperty(obj, path) {
   }
 }
 
-app.all('*', async (req, res) => {
+app.all('/*splat', async (req, res) => {
   const call = {
     method: req.method,
     headers: req.headers,
     url: req.url,
-    body: req.body,
+    body: req.body || {},
   };
   if (nextCallListeners.length) {
     nextCallListeners.forEach((listener) => listener(call));
@@ -192,7 +193,7 @@ app.all('*', async (req, res) => {
     calls.push(call);
   }
 
-  const stringifiedBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body, null, 2);
+  const stringifiedBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}, null, 2);
   for (const route of routes) {
     if (
       new RegExp(`^${route.request.match}$`).test(req.url) &&
@@ -200,7 +201,7 @@ app.all('*', async (req, res) => {
     ) {
       console.log(`Call to ${req.url} matched ${route.request.match} ${route.request.bodyMatch || ''}`);
       const response = route.response;
-      res.status(response.status || 200);
+      res.status(typeof response.status === 'string' ? parseInt(response.status, 10) : response.status || 200);
       res.setHeader('Content-Type', response.contentType || 'application/json');
       const body = response.bodies ? response.bodies.shift() : response.body;
       res.send(response.contentType ? body : JSON.stringify(body));
@@ -212,7 +213,7 @@ app.all('*', async (req, res) => {
     }
   }
 
-  const obfuscatedReqBodyForHash = JSON.parse(JSON.stringify(req.body));
+  const obfuscatedReqBodyForHash = JSON.parse(JSON.stringify(req.body || {}));
   recordingsContext.deleteBodyAttributesForHash.forEach((path) => {
     deleteNestedProperty(obfuscatedReqBodyForHash, path);
   });
@@ -257,7 +258,7 @@ app.all('*', async (req, res) => {
       });
       const status = proxyRes.status;
 
-      res.status(proxyRes.status);
+      res.status(status);
       const contentType = proxyRes.headers.get('content-type');
       let body;
       if (contentType && contentType.includes('application/json')) {
@@ -294,7 +295,7 @@ app.all('*', async (req, res) => {
     if (typeof durationMs === 'number' && durationMs > 0) {
       await new Promise((r) => setTimeout(r, durationMs));
     }
-    res.status(status);
+    res.status(typeof status === 'string' ? parseInt(status, 10) : status);
     if (typeof body === 'object') {
       res.setHeader('Content-Type', 'application/json');
       res.send(body);
