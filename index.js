@@ -87,7 +87,7 @@ const streamToString = (readStream) =>
 route.post('/mock', (req, res) => {
   console.log(`Mocking route:`, req.body);
   routes = routes.filter(
-    (route) => !(route.request.match === req.body.request.match && route.request.bodyMatch === req.body.request.bodyMatch)
+    (route) => !(route.request.match === req.body.request.match && route.request.bodyMatch === req.body.request.bodyMatch),
   );
   routes.push(req.body);
   res.sendStatus(204);
