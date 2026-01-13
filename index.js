@@ -129,6 +129,24 @@ route.get('/recordings', (_, res) => {
   res.send(recordingsContext.recordings);
 });
 
+route.post('/recordings/rehash', (_req, res) => {
+  console.log('Rehashing recordings');
+  const newRecordings = {};
+
+  Object.values(recordingsContext.recordings)
+    .flat()
+    .forEach((recording) => {
+      const hash = recording.request.headers['x-mock-hash'] || getShaFromData(recording.request);
+      if (!newRecordings[hash]) {
+        newRecordings[hash] = [];
+      }
+      newRecordings[hash].push(recording);
+    });
+
+  recordingsContext.recordings = newRecordings;
+  res.send(recordingsContext.recordings);
+});
+
 route.get('/calls', (_req, res) => {
   res.send(calls);
 });
@@ -243,7 +261,7 @@ app.all('/*splat', async (req, res) => {
     delete dataToHash.headers[header];
   });
 
-  const hash = getShaFromData(dataToHash);
+  const hash = req.headers['x-mock-hash'] || getShaFromData(dataToHash);
 
   if (recordingsContext.active) {
     try {
