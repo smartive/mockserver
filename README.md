@@ -1,4 +1,4 @@
-# Smart Mock Server
+# Mockserver
 
 [![npm version](https://badge.fury.io/js/@smartive%2Fmockserver.svg)](https://www.npmjs.com/package/@smartive/mockserver)
 [![Docker Pulls](https://img.shields.io/docker/pulls/smartive/mockserver)](https://hub.docker.com/r/smartive/mockserver)
@@ -67,11 +67,15 @@ services:
       MOCK_SMTP_PORT: 25
 ```
 
-### Using npm
+### Using npm/npx
 
 ```bash
-npm install -g @smartive/mockserver
+# Run directly without installation
 npx @smartive/mockserver
+
+# Or install globally
+npm install -g @smartive/mockserver
+mockserver
 ```
 
 ### From Source
