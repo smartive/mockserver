@@ -12,11 +12,13 @@ Modern web frameworks like Next.js, Remix, and SvelteKit fetch data server-side 
 ### The Problem
 
 **Client-Side Rendering (CSR):**
+
 ```
 Browser → External API ✅ Easy to mock with browser tools
 ```
 
 **Server-Side Rendering (SSR):**
+
 ```
 Browser → App Server → External API ❌ Browser tools can't intercept
 ```
@@ -51,13 +53,13 @@ docker run -p 1080:1080 smartive/mockserver
 ### Using Docker Compose
 
 ```yaml
-version: "3.3"
+version: '3.3'
 services:
   mockserver:
     image: smartive/mockserver
     ports:
-      - "1080:1080"
-      - "25:25"  # Optional: SMTP server
+      - '1080:1080'
+      - '25:25' # Optional: SMTP server
     environment:
       MOCK_PATH: /mock
       MOCK_HOST: 0.0.0.0
@@ -97,11 +99,13 @@ STORYBLOK_API_BASE_URL="http://localhost:1080/api.storyblok.com"
 ```
 
 This transforms requests from:
+
 ```
 https://api.storyblok.com/v2/cdn/stories/home
 ```
 
 to:
+
 ```
 http://localhost:1080/api.storyblok.com/v2/cdn/stories/home
 ```
@@ -112,19 +116,19 @@ Enable recording to capture real API responses:
 
 ```javascript
 // Enable recording mode
-await fetch("http://localhost:1080/mock/recordings", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ 
+await fetch('http://localhost:1080/mock/recordings', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
     active: true,
     // Optional: Remove dynamic fields from hash calculation
-    deleteBodyAttributesForHash: ["timestamp", "requestId"],
-    deleteHeadersForHash: ["authorization", "x-request-id"],
+    deleteBodyAttributesForHash: ['timestamp', 'requestId'],
+    deleteHeadersForHash: ['authorization', 'x-request-id'],
   }),
 });
 
 // Run your E2E tests - all API calls will be recorded
-await page.goto("http://localhost:3000");
+await page.goto('http://localhost:3000');
 // ... perform your test actions ...
 ```
 
@@ -133,15 +137,12 @@ await page.goto("http://localhost:3000");
 After recording, export the captured responses:
 
 ```javascript
-const response = await fetch("http://localhost:1080/mock/recordings");
+const response = await fetch('http://localhost:1080/mock/recordings');
 const recordings = await response.json();
 
 // Save to your repository
-import { writeFileSync } from "fs";
-writeFileSync(
-  "test/e2e/recordings/home.json",
-  JSON.stringify(recordings, null, 2)
-);
+import { writeFileSync } from 'fs';
+writeFileSync('test/e2e/recordings/home.json', JSON.stringify(recordings, null, 2));
 ```
 
 ⚠️ **Important**: Review exported recordings for sensitive data (API keys, tokens, passwords) before committing!
@@ -151,21 +152,21 @@ writeFileSync(
 In your CI or test environment, use the recorded responses:
 
 ```javascript
-import recordings from "../recordings/home.json";
+import recordings from '../recordings/home.json';
 
-test("renders homepage with mocked data", async ({ page }) => {
+test('renders homepage with mocked data', async ({ page }) => {
   // Load recordings into mock server
-  await fetch("http://localhost:1080/mock/recordings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  await fetch('http://localhost:1080/mock/recordings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      active: false,  // Replay mode
+      active: false, // Replay mode
       recordings,
     }),
   });
 
-  await page.goto("http://localhost:3000");
-  await expect(page.getByText("Expected Content")).toBeVisible();
+  await page.goto('http://localhost:3000');
+  await expect(page.getByText('Expected Content')).toBeVisible();
 });
 ```
 
@@ -175,21 +176,21 @@ For simpler scenarios or testing edge cases, define mock responses manually:
 
 ```javascript
 // Mock a specific endpoint
-await fetch("http://localhost:1080/mock/mock", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
+await fetch('http://localhost:1080/mock/mock', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     request: {
-      match: "/api.example.com/users/.*",  // Regex pattern
-      bodyMatch: ".*premium.*",  // Optional: match request body
+      match: '/api.example.com/users/.*', // Regex pattern
+      bodyMatch: '.*premium.*', // Optional: match request body
     },
     response: {
       status: 200,
-      contentType: "application/json",
+      contentType: 'application/json',
       body: {
-        id: "123",
-        name: "Test User",
-        tier: "premium",
+        id: '123',
+        name: 'Test User',
+        tier: 'premium',
       },
     },
   }),
@@ -201,19 +202,16 @@ await fetch("http://localhost:1080/mock/mock", {
 Return different responses for consecutive calls:
 
 ```javascript
-await fetch("http://localhost:1080/mock/mock", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
+await fetch('http://localhost:1080/mock/mock', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     request: {
-      match: "/api.example.com/status",
+      match: '/api.example.com/status',
     },
     response: {
       status: 200,
-      bodies: [
-        { status: "processing" },
-        { status: "completed" },
-      ],
+      bodies: [{ status: 'processing' }, { status: 'completed' }],
     },
   }),
 });
@@ -228,11 +226,11 @@ The built-in SMTP server captures emails for testing:
 // ...
 
 // Wait for and retrieve the email
-const emailResponse = await fetch("http://localhost:1080/mock/mails/next");
+const emailResponse = await fetch('http://localhost:1080/mock/mails/next');
 const email = await emailResponse.text();
 
 // Assert email contents
-expect(email).toContain("Welcome to our service");
+expect(email).toContain('Welcome to our service');
 ```
 
 ## API Reference
@@ -244,6 +242,7 @@ expect(email).toContain("Welcome to our service");
 Configure recording/replay mode.
 
 **Request Body:**
+
 ```javascript
 {
   active: true,  // true = record mode, false = replay mode
@@ -267,6 +266,7 @@ Configure recording/replay mode.
 Retrieve all recorded API responses.
 
 **Response:**
+
 ```javascript
 {
   "hash1": [{
@@ -292,6 +292,7 @@ Recalculate hashes for all recordings based on current hash configuration.
 Register a manual mock route.
 
 **Request Body:**
+
 ```javascript
 {
   request: {
@@ -323,15 +324,20 @@ List all registered mock routes.
 Get all captured requests.
 
 **Response:**
+
 ```javascript
 [
   {
-    method: "GET",
-    url: "/api.example.com/users/123",
-    headers: { /* ... */ },
-    body: { /* ... */ }
-  }
-]
+    method: 'GET',
+    url: '/api.example.com/users/123',
+    headers: {
+      /* ... */
+    },
+    body: {
+      /* ... */
+    },
+  },
+];
 ```
 
 #### `GET /mock/calls/next`
@@ -372,13 +378,13 @@ Reset only calls and emails (keeps routes and recordings).
 
 Configure the server using environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MOCK_HTTP_PORT` or `PORT` | `1080` | HTTP server port |
-| `MOCK_HTTPS_PORT` or `HTTPS_PORT` | - | HTTPS server port (optional) |
-| `MOCK_SMTP_PORT` or `SMTP_PORT` | `25` | SMTP server port |
-| `MOCK_HOST` or `HOST` | `0.0.0.0` | Server host |
-| `MOCK_PATH` | `/mock` | Base path for API endpoints |
+| Variable                          | Default   | Description                  |
+| --------------------------------- | --------- | ---------------------------- |
+| `MOCK_HTTP_PORT` or `PORT`        | `1080`    | HTTP server port             |
+| `MOCK_HTTPS_PORT` or `HTTPS_PORT` | -         | HTTPS server port (optional) |
+| `MOCK_SMTP_PORT` or `SMTP_PORT`   | `25`      | SMTP server port             |
+| `MOCK_HOST` or `HOST`             | `0.0.0.0` | Server host                  |
+| `MOCK_PATH`                       | `/mock`   | Base path for API endpoints  |
 
 ### HTTPS Support
 
@@ -395,18 +401,18 @@ MOCK_HTTPS_PORT=1443 npm start
 ## Complete Example: Playwright Test
 
 ```javascript
-import { test, expect } from "@playwright/test";
-import recordings from "./recordings/homepage.json";
+import { test, expect } from '@playwright/test';
+import recordings from './recordings/homepage.json';
 
-test.describe("Homepage E2E", () => {
+test.describe('Homepage E2E', () => {
   test.beforeEach(async () => {
     // Reset mock server
-    await fetch("http://localhost:1080/mock/reset", { method: "POST" });
-    
+    await fetch('http://localhost:1080/mock/reset', { method: 'POST' });
+
     // Load recordings
-    await fetch("http://localhost:1080/mock/recordings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    await fetch('http://localhost:1080/mock/recordings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         active: false,
         recordings,
@@ -414,30 +420,30 @@ test.describe("Homepage E2E", () => {
     });
   });
 
-  test("displays content from mocked API", async ({ page }) => {
-    await page.goto("http://localhost:3000");
-    
+  test('displays content from mocked API', async ({ page }) => {
+    await page.goto('http://localhost:3000');
+
     // Verify content rendered from mock data
-    await expect(page.getByText("Mock Server with API Recording")).toBeVisible();
-    
+    await expect(page.getByText('Mock Server with API Recording')).toBeVisible();
+
     // Verify API was called
-    const calls = await fetch("http://localhost:1080/mock/calls").then(r => r.json());
+    const calls = await fetch('http://localhost:1080/mock/calls').then((r) => r.json());
     expect(calls.length).toBeGreaterThan(0);
   });
 
-  test("handles API errors gracefully", async ({ page }) => {
+  test('handles API errors gracefully', async ({ page }) => {
     // Override with error response
-    await fetch("http://localhost:1080/mock/mock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    await fetch('http://localhost:1080/mock/mock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        request: { match: "/api.example.com/.*" },
-        response: { status: 500, body: { error: "Internal Server Error" } },
+        request: { match: '/api.example.com/.*' },
+        response: { status: 500, body: { error: 'Internal Server Error' } },
       }),
     });
 
-    await page.goto("http://localhost:3000");
-    await expect(page.getByText("Something went wrong")).toBeVisible();
+    await page.goto('http://localhost:3000');
+    await expect(page.getByText('Something went wrong')).toBeVisible();
   });
 });
 ```
@@ -448,48 +454,46 @@ Create a script to record new API interactions:
 
 ```javascript
 // scripts/record-api.js
-import { chromium } from "@playwright/test";
-import { writeFileSync } from "fs";
+import { chromium } from '@playwright/test';
+import { writeFileSync } from 'fs';
 
 async function record() {
   // Start recording
-  await fetch("http://localhost:1080/mock/recordings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
+  await fetch('http://localhost:1080/mock/recordings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       active: true,
-      deleteBodyAttributesForHash: ["timestamp", "_v"],
-      deleteHeadersForHash: ["cookie", "authorization"],
+      deleteBodyAttributesForHash: ['timestamp', '_v'],
+      deleteHeadersForHash: ['cookie', 'authorization'],
     }),
   });
 
   // Run through your app
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  
-  await page.goto("http://localhost:3000");
-  await page.click("text=Get Started");
-  await page.fill("#email", "test@example.com");
-  await page.click("button[type=submit]");
-  
+
+  await page.goto('http://localhost:3000');
+  await page.click('text=Get Started');
+  await page.fill('#email', 'test@example.com');
+  await page.click('button[type=submit]');
+
   await browser.close();
 
   // Export recordings
-  const response = await fetch("http://localhost:1080/mock/recordings");
+  const response = await fetch('http://localhost:1080/mock/recordings');
   const recordings = await response.json();
-  
-  writeFileSync(
-    "test/recordings/user-flow.json",
-    JSON.stringify(recordings, null, 2)
-  );
-  
-  console.log("✅ Recordings saved to test/recordings/user-flow.json");
+
+  writeFileSync('test/recordings/user-flow.json', JSON.stringify(recordings, null, 2));
+
+  console.log('✅ Recordings saved to test/recordings/user-flow.json');
 }
 
 record().catch(console.error);
 ```
 
 Run it with:
+
 ```bash
 node scripts/record-api.js
 ```
@@ -499,6 +503,7 @@ node scripts/record-api.js
 ### 1. Keep Recordings Small and Focused
 
 Record separate files for different test scenarios:
+
 ```
 test/recordings/
   ├── homepage.json
@@ -531,6 +536,7 @@ Always exclude sensitive information from recordings:
 ### 3. Version Your Recordings
 
 Commit recordings to version control alongside your tests:
+
 ```bash
 git add test/recordings/
 git commit -m "Update API recordings for new endpoint"
@@ -542,7 +548,7 @@ Always reset the mock server to ensure test isolation:
 
 ```javascript
 test.beforeEach(async () => {
-  await fetch("http://localhost:1080/mock/reset", { method: "POST" });
+  await fetch('http://localhost:1080/mock/reset', { method: 'POST' });
 });
 ```
 
@@ -551,15 +557,15 @@ test.beforeEach(async () => {
 Use `failedRequestsResponse` to provide fallbacks:
 
 ```javascript
-await fetch("http://localhost:1080/mock/recordings", {
-  method: "POST",
+await fetch('http://localhost:1080/mock/recordings', {
+  method: 'POST',
   body: JSON.stringify({
     active: false,
     recordings,
     failedRequestsResponse: {
-      error: "Not found in recordings",
-      data: null
-    }
+      error: 'Not found in recordings',
+      data: null,
+    },
   }),
 });
 ```
@@ -589,7 +595,7 @@ When using HTTPS mode, you may need to trust self-signed certificates:
 ```javascript
 // In Playwright
 const context = await browser.newContext({
-  ignoreHTTPSErrors: true
+  ignoreHTTPSErrors: true,
 });
 ```
 
