@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const { SMTPServer } = require('smtp-server');
 const crypto = require('crypto');
+const { appendFile, mkdir } = require('fs/promises');
 
 const app = express();
 const http = require('http');
@@ -14,6 +15,8 @@ const HTTPS_PORT = process.env.MOCK_HTTPS_PORT || process.env.HTTPS_PORT;
 const SMTP_PORT = process.env.MOCK_SMTP_PORT || process.env.SMTP_PORT || '25';
 const HOST = process.env.MOCK_HOST || process.env.HOST || '0.0.0.0';
 const MOCK_PATH = process.env.MOCK_PATH || '/mock';
+const DEBUG_STATS_DIR = process.env.MOCK_DEBUG_STATS_DIR || 'debug';
+const DEBUG_STATS_FILE = `${DEBUG_STATS_DIR}/request-stats.ndjson`;
 
 let routes = [];
 let calls = [];
@@ -28,6 +31,20 @@ let recordingsContext = {
   failedRequestsResponse: undefined,
   recordings: {},
 };
+let debugStatsInitPromise = Promise.resolve();
+
+async function initializeDebugStats() {
+  await mkdir(DEBUG_STATS_DIR, { recursive: true });
+  console.log(`Request debug stats enabled: ${DEBUG_STATS_FILE}`);
+}
+
+function writeDebugStat(entry) {
+  debugStatsInitPromise
+    .then(() => appendFile(DEBUG_STATS_FILE, `${JSON.stringify(entry)}\n`))
+    .catch((error) => {
+      console.error('Failed to write debug stats entry:', error.message);
+    });
+}
 
 /*
 Structure of route:
@@ -48,6 +65,7 @@ Structure of route:
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.text({ limit: '50mb', type: '*/*' }));
+debugStatsInitPromise = initializeDebugStats();
 
 const smtpServer = new SMTPServer({
   authOptional: true,
@@ -198,6 +216,13 @@ function deleteNestedProperty(obj, path) {
 }
 
 app.all('/*splat', async (req, res) => {
+  const requestId = crypto.randomUUID();
+  const debugBase = {
+    timestamp: new Date().toISOString(),
+    requestId,
+    method: req.method,
+    url: req.url,
+  };
   const call = {
     method: req.method,
     headers: req.headers,
@@ -212,22 +237,38 @@ app.all('/*splat', async (req, res) => {
   }
 
   const stringifiedBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}, null, 2);
+  const urlMatchedButBodyMismatched = [];
   for (const route of routes) {
-    if (
-      new RegExp(`^${route.request.match}$`).test(req.url) &&
-      (!route.request.bodyMatch || new RegExp(`^${route.request.bodyMatch}$`, 's').test(stringifiedBody))
-    ) {
+    const urlMatched = new RegExp(`^${route.request.match}$`).test(req.url);
+    const bodyMatched = !route.request.bodyMatch || new RegExp(`^${route.request.bodyMatch}$`, 's').test(stringifiedBody);
+    if (urlMatched && bodyMatched) {
       console.log(`Call to ${req.url} matched ${route.request.match} ${route.request.bodyMatch || ''}`);
       const response = route.response;
       res.status(typeof response.status === 'string' ? parseInt(response.status, 10) : response.status || 200);
       res.setHeader('Content-Type', response.contentType || 'application/json');
       const body = response.bodies ? response.bodies.shift() : response.body;
       res.send(response.contentType ? body : JSON.stringify(body));
+      writeDebugStat({
+        ...debugBase,
+        mockHit: true,
+        source: 'routes',
+        reason: 'url_and_body_match',
+        details: {
+          routeMatch: route.request.match,
+          routeBodyMatch: route.request.bodyMatch || null,
+        },
+      });
       if (response.bodies && response.bodies.length === 0) {
         routes = routes.filter((r) => r !== nm, route);
       }
 
       return;
+    }
+    if (urlMatched && !bodyMatched) {
+      urlMatchedButBodyMismatched.push({
+        routeMatch: route.request.match,
+        routeBodyMatch: route.request.bodyMatch || null,
+      });
     }
   }
 
@@ -298,10 +339,33 @@ app.all('/*splat', async (req, res) => {
         request: dataToHash,
         durationMs,
       });
+      writeDebugStat({
+        ...debugBase,
+        mockHit: false,
+        source: 'recordings',
+        reason: 'recordings_active_proxy_success',
+        details: {
+          hash,
+          targetUrl,
+          status,
+          urlMatchedButBodyMismatched,
+        },
+      });
     } catch (e) {
       console.log({
         error: e.message + ' ' + req.method,
         url: req.url,
+      });
+      writeDebugStat({
+        ...debugBase,
+        mockHit: false,
+        source: 'recordings',
+        reason: 'recordings_active_proxy_failed',
+        details: {
+          hash,
+          error: e.message,
+          urlMatchedButBodyMismatched,
+        },
       });
     }
     return;
@@ -325,6 +389,16 @@ app.all('/*splat', async (req, res) => {
         res.send(body);
       }
     }
+    writeDebugStat({
+      ...debugBase,
+      mockHit: true,
+      source: 'recordings',
+      reason: 'recording_hash_match',
+      details: {
+        hash,
+        status,
+      },
+    });
     return;
   }
 
@@ -335,10 +409,34 @@ app.all('/*splat', async (req, res) => {
         recordings: `Hash ${hash} didn't match any recordings. Request data: ${JSON.stringify(dataToHash, null, 2)}`,
       },
     });
+    writeDebugStat({
+      ...debugBase,
+      mockHit: false,
+      source: 'none',
+      reason: 'no_route_or_recording_match',
+      details: {
+        hash,
+        routesConfigured: routes.length,
+        urlMatchedButBodyMismatched,
+        failedRequestsResponseConfigured: true,
+      },
+    });
 
     res.status(200).send(recordingsContext.failedRequestsResponse);
     return;
   }
+  writeDebugStat({
+    ...debugBase,
+    mockHit: false,
+    source: 'none',
+    reason: 'no_route_or_recording_match',
+    details: {
+      hash,
+      routesConfigured: routes.length,
+      urlMatchedButBodyMismatched,
+      failedRequestsResponseConfigured: false,
+    },
+  });
   res.status(400).send({
     error: {
       routes: `Request ${req.url} didn't match any registered route. ${JSON.stringify(req.url, null, 2)}`,
