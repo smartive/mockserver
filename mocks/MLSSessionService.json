@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "POST",
+    "match": "/qmls.migros.net/mlsonline/cxf/MLSSessionService",
+    "bodyMatch": ".*ser:login.*"
+  },
+  "response": {
+    "status": 200,
+    "body": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <loginResponse xmlns=\"http://services.mlsonline.sowatec.com\">\n      <return>7f9c2d3a-0f14-4a8b-9d22-2f6f9d8b1234</return>\n    </loginResponse>\n  </soap:Body>\n</soap:Envelope>"
+  }
+}

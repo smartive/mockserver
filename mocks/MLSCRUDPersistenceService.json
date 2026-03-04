@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "POST",
+    "match": "/mlsonline/cxf/MLSCRUDPersistenceService",
+    "bodyMatch": ".*readObjects.*OrderPendency.*"
+  },
+  "response": {
+    "status": 200,
+    "body": "<soap:Envelope xmlns:soap=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><soap:Body><ns3:readObjectsResponse xmlns:xsi=\\\"http://www.w3.org/2001/XMLSchema-instance\\\" xmlns:xs=\\\"http://www.w3.org/2001/XMLSchema\\\" xmlns:ns3=\\\"http://services.mlsonline.sowatec.com\\\" xmlns:ns4=\\\"http://dataobjects.mlsonline.sowatec.com\\\"><ns3:readObjectsReturn>PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48UmVzdWx0Lz4=</ns3:readObjectsReturn></ns3:readObjectsResponse></soap:Body></soap:Envelope>"
+  }
+}

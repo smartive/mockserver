@@ -18,12 +18,6 @@ Mock server with **API recording and replay** for E2E testing. Works as a proxy 
 docker run -p 1080:1080 -p 25:25 smartive/mockserver
 ```
 
-Or with npm:
-
-```bash
-npx @smartive/mockserver
-```
-
 ## Usage
 
 ### Record & Replay
@@ -89,6 +83,24 @@ await fetch('http://localhost:1080/mock/mock', {
 });
 ```
 
+### Dashboard-based Mock Management
+
+Open the built-in dashboard:
+
+```text
+http://localhost:1080/mock/dashboard
+```
+
+The dashboard lets you create file-backed mocks with:
+
+- `request.method` (optional, defaults to match any method)
+- `request.match` (URL regex)
+- `request.bodyMatch` (optional body regex)
+- `response.status`
+- `response.body`
+
+Saved mocks are written to `mocks/*.json` (configurable via `MOCKS_DIR`) and are auto-loaded into active routes.
+
 ### Email Testing
 
 ```javascript
@@ -115,13 +127,14 @@ expect(email).toContain('Welcome');
 
 ## Configuration
 
-| Variable          | Default   | Description   |
-| ----------------- | --------- | ------------- |
-| `MOCK_HTTP_PORT`  | `1080`    | HTTP port     |
-| `MOCK_HTTPS_PORT` | -         | HTTPS port    |
-| `MOCK_SMTP_PORT`  | `25`      | SMTP port     |
-| `MOCK_HOST`       | `0.0.0.0` | Host          |
-| `MOCK_PATH`       | `/mock`   | API base path |
+| Variable          | Default   | Description                 |
+| ----------------- | --------- | --------------------------- |
+| `MOCK_HTTP_PORT`  | `1080`    | HTTP port                   |
+| `MOCK_HTTPS_PORT` | -         | HTTPS port                  |
+| `MOCK_SMTP_PORT`  | `25`      | SMTP port                   |
+| `MOCK_HOST`       | `0.0.0.0` | Host                        |
+| `MOCK_PATH`       | `/mock`   | API base path               |
+| `MOCKS_DIR`       | `mocks`   | File-backed mocks directory |
 
 ## Advanced Recording Options
 

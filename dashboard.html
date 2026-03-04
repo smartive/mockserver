@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockserver Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px; background: #f4f6fb; color: #111827; }
+    h1 { margin: 0 0 16px; font-size: 40px; line-height: 1.1; }
+    h2 { margin: 0 0 12px; font-size: 24px; line-height: 1.2; }
+    .container { max-width: 1700px; margin: 0 auto; display: grid; grid-template-columns: minmax(300px, 360px) minmax(420px, 1fr) minmax(420px, 1fr); gap: 16px; align-items: start; }
+    .card { background: #fff; border: 1px solid #dde3ef; border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05); }
+    label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 6px; color: #1f2937; }
+    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #cfd8e8; border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; background: #fff; }
+    input:focus, textarea:focus, select:focus { outline: 2px solid #bfdbfe; border-color: #60a5fa; }
+    textarea { min-height: 108px; resize: vertical; }
+    button { margin-top: 12px; padding: 10px 14px; border: 0; border-radius: 8px; background: #2563eb; color: white; cursor: pointer; font-weight: 600; font-size: 14px; }
+    button:hover { background: #1d4ed8; }
+    .list { max-height: 520px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
+    .item { padding: 12px; border-bottom: 1px solid #eef2f7; cursor: pointer; }
+    .item:hover { background: #f8fafc; }
+    .item:last-child { border-bottom: 0; }
+    .item.active { background: #eef5ff; border-left: 3px solid #2563eb; padding-left: 9px; }
+    .muted { color: #6b7280; font-size: 12px; }
+    pre { background: #0b1220; color: #e5e7eb; padding: 12px; border-radius: 10px; overflow: auto; font-size: 13px; line-height: 1.35; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .itemHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .smallBtn { margin-top: 0; padding: 6px 10px; font-size: 12px; border-radius: 6px; }
+    #statusText { margin-top: 8px; min-height: 18px; }
+    @media (max-width: 1360px) {
+      .container { grid-template-columns: 1fr 1fr; }
+      .card:first-child { grid-column: span 2; }
+    }
+    @media (max-width: 900px) {
+      body { padding: 14px; }
+      .container { grid-template-columns: 1fr; }
+      .card:first-child { grid-column: span 1; }
+      h1 { font-size: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Mockserver Dashboard</h1>
+  <div class="container">
+    <div class="card">
+      <h2>Create mock</h2>
+      <label>Mock name (file name)</label>
+      <input id="name" placeholder="session-service-login" />
+
+      <div class="row">
+        <div>
+          <label>Method</label>
+          <select id="method">
+            <option>GET</option><option selected>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+          </select>
+        </div>
+        <div>
+          <label>Status</label>
+          <input id="status" type="number" value="200" />
+        </div>
+      </div>
+
+      <label>URL match (regex)</label>
+      <input id="match" value="/qmls.migros.net/mlsonline/cxf/MLSSessionService" />
+
+      <label>Body match (regex, optional)</label>
+      <textarea id="bodyMatch" placeholder=".*Login.*"></textarea>
+
+      <label>Response body (JSON or plain text)</label>
+      <textarea id="responseBody">{"ok":true}</textarea>
+
+      <button id="save">Save mock</button>
+      <div class="muted" id="statusText"></div>
+    </div>
+
+    <div class="card">
+      <h2>Saved mocks</h2>
+      <div class="list" id="list"></div>
+    </div>
+
+    <div class="card">
+      <h2>Debug requests</h2>
+      <div class="actions">
+        <button id="refreshDebug" type="button">Refresh debug list</button>
+        <button id="useSelected" type="button">Use selected</button>
+      </div>
+      <div class="list" id="debugList"></div>
+      <label>Selected debug entry</label>
+      <pre id="debugDetails">No entry selected.</pre>
+    </div>
+  </div>
+
+  <script>
+    const MOCK_PATH = window.__MOCK_PATH__ || '/mock';
+    const listEl = document.getElementById('list');
+    const statusText = document.getElementById('statusText');
+    const debugListEl = document.getElementById('debugList');
+    const debugDetailsEl = document.getElementById('debugDetails');
+    let selectedDebugEntry = null;
+
+    function pretty(value) {
+      return JSON.stringify(value, null, 2);
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        statusText.textContent = 'Copied mock JSON.';
+      } catch {
+        statusText.textContent = 'Copy failed. Browser clipboard blocked.';
+      }
+    }
+
+    function parseResponseBody(raw) {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return raw;
+      }
+    }
+
+    async function loadMocks() {
+      const response = await fetch(`${MOCK_PATH}/dashboard/mocks`);
+      const data = await response.json();
+      listEl.innerHTML = '';
+      data.forEach((entry) => {
+        const item = document.createElement('div');
+        item.className = 'item';
+        const header = document.createElement('div');
+        header.className = 'itemHeader';
+
+        const titleWrap = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = entry.fileName;
+        const subtitle = document.createElement('div');
+        subtitle.className = 'muted';
+        subtitle.textContent = `${entry.mock.request?.method || 'ANY'} ${entry.mock.request.match}`;
+        titleWrap.appendChild(title);
+        titleWrap.appendChild(subtitle);
+
+        const copyButton = document.createElement('button');
+        copyButton.type = 'button';
+        copyButton.className = 'smallBtn';
+        copyButton.textContent = 'Copy';
+        copyButton.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          await copyText(pretty(entry.mock));
+        });
+
+        header.appendChild(titleWrap);
+        header.appendChild(copyButton);
+
+        const pre = document.createElement('pre');
+        pre.textContent = pretty(entry.mock);
+
+        item.appendChild(header);
+        item.appendChild(pre);
+        listEl.appendChild(item);
+      });
+      if (!data.length) {
+        listEl.innerHTML = '<div class="item muted">No mocks saved yet.</div>';
+      }
+    }
+
+    function renderDebugDetails(entry) {
+      if (!entry) {
+        debugDetailsEl.textContent = 'No entry selected.';
+        return;
+      }
+      debugDetailsEl.textContent = pretty(entry);
+    }
+
+    async function loadDebugEntries() {
+      const response = await fetch(`${MOCK_PATH}/dashboard/debug-entries`);
+      const entries = await response.json();
+      debugListEl.innerHTML = '';
+
+      entries.forEach((entry, index) => {
+        const item = document.createElement('div');
+        item.className = 'item';
+        const method = entry.method || 'UNKNOWN';
+        const url = entry.url || '-';
+        const reason = entry.reason || '-';
+        item.innerHTML = '<strong>' + method + ' ' + url + '</strong>' +
+          '<div class="muted">' + (entry.timestamp || '') + ' · ' + reason + '</div>';
+        item.addEventListener('click', () => {
+          selectedDebugEntry = entry;
+          Array.from(debugListEl.children).forEach((child) => child.classList.remove('active'));
+          item.classList.add('active');
+          renderDebugDetails(entry);
+        });
+        if (index === 0) {
+          selectedDebugEntry = entry;
+          item.classList.add('active');
+          renderDebugDetails(entry);
+        }
+        debugListEl.appendChild(item);
+      });
+
+      if (!entries.length) {
+        selectedDebugEntry = null;
+        debugListEl.innerHTML = '<div class="item muted">No debug entries found.</div>';
+        renderDebugDetails(null);
+      }
+    }
+
+    document.getElementById('save').addEventListener('click', async () => {
+      statusText.textContent = '';
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        mock: {
+          request: {
+            method: document.getElementById('method').value,
+            match: document.getElementById('match').value,
+            bodyMatch: document.getElementById('bodyMatch').value || undefined,
+          },
+          response: {
+            status: Number(document.getElementById('status').value) || 200,
+            body: parseResponseBody(document.getElementById('responseBody').value),
+          },
+        },
+      };
+
+      const res = await fetch(`${MOCK_PATH}/dashboard/mocks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        statusText.textContent = 'Failed: ' + err;
+        return;
+      }
+
+      statusText.textContent = 'Saved and loaded into active routes.';
+      await loadMocks();
+    });
+
+    document.getElementById('refreshDebug').addEventListener('click', async () => {
+      await loadDebugEntries();
+    });
+
+    document.getElementById('useSelected').addEventListener('click', () => {
+      if (!selectedDebugEntry) {
+        statusText.textContent = 'No debug entry selected.';
+        return;
+      }
+      document.getElementById('method').value = selectedDebugEntry.method || 'POST';
+      document.getElementById('match').value = selectedDebugEntry.url || '';
+      const details = selectedDebugEntry.details || {};
+      if (Array.isArray(details.urlMatchedButBodyMismatched) && details.urlMatchedButBodyMismatched.length > 0) {
+        const first = details.urlMatchedButBodyMismatched[0];
+        document.getElementById('bodyMatch').value = first.routeBodyMatch || '';
+      }
+      statusText.textContent = 'Selected debug request copied into mock fields.';
+    });
+
+    loadMocks();
+    loadDebugEntries();
+  </script>
+</body>
+</html>
