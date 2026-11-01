@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/smartive/mockserver#readme",
   "engines": {
-    "node": "^24",
+    "node": "^26.0.0",
     "npm": ">=10"
   },
   "author": "",
